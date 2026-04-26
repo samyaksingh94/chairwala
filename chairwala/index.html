@@ -59,6 +59,32 @@
         document.head.appendChild(touchLink);
       };
       img.src = url;
+
+      // Apple touch startup image (PWA launch screen)
+      const splashSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="52 18 96 180" fill="none" stroke="#0d0d0d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${svgLines}</svg>`;
+      const splashImg = new Image();
+      const splashBlob = new Blob([splashSvg], { type: 'image/svg+xml' });
+      const splashUrl = URL.createObjectURL(splashBlob);
+      splashImg.onload = function() {
+        const dpr = window.devicePixelRatio || 1;
+        const sw = window.screen.width * dpr;
+        const sh = window.screen.height * dpr;
+        const canvas = document.createElement('canvas');
+        canvas.width = sw; canvas.height = sh;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#f7f4ef';
+        ctx.fillRect(0, 0, sw, sh);
+        // Draw chair centered at ~28% of screen height
+        const chairH = sh * 0.18;
+        const chairW = 96 * (chairH / 180);
+        ctx.drawImage(splashImg, (sw - chairW) / 2, (sh - chairH) / 2, chairW, chairH);
+        URL.revokeObjectURL(splashUrl);
+        const splashLink = document.createElement('link');
+        splashLink.rel = 'apple-touch-startup-image';
+        splashLink.href = canvas.toDataURL('image/png');
+        document.head.appendChild(splashLink);
+      };
+      splashImg.src = splashUrl;
     })();
   </script>
   <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
@@ -565,7 +591,7 @@
       border: none;
     }
 
-    body.fs .grid-status {
+    body.fs #gridStatus {
       max-height: 0;
       padding: 0;
       opacity: 0;
@@ -768,7 +794,43 @@
     }
     /* ── END LIST FEATURE ── */
 
+    /* ── DESIGNER PAGE ── */
+    .designer-page { display: none; padding: 52px 52px 80px; }
+
+    .dpage-back {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: inherit; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      opacity: 0.35; background: none; border: none; cursor: pointer; color: var(--ink);
+      padding: 0; margin-bottom: 44px; transition: opacity 0.12s;
+    }
+    .dpage-back:hover { opacity: 0.8; }
+
+    .dpage-name {
+      font-size: clamp(28px, 4vw, 52px); font-weight: 500; line-height: 1;
+      letter-spacing: -0.01em; margin-bottom: 10px;
+    }
+    .dpage-meta { font-size: 16px; font-style: italic; opacity: 0.5; margin-bottom: 28px; }
+    .dpage-bio  { font-size: 16px; line-height: 1.8; opacity: 0.8; max-width: 580px; }
+
+    .dpage-section {
+      border-top: 1px solid var(--border); margin-top: 48px; padding-top: 20px;
+      display: flex; justify-content: space-between; align-items: baseline;
+    }
+    .dpage-section-label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.35; }
+    .dpage-section-count { font-size: 13px; font-style: italic; opacity: 0.45; }
+    .dpage-divider { border: none; border-top: 1px solid var(--border); margin-top: 48px; }
+    body.designer-view header { border-bottom: 1px solid var(--border); }
+    .designer-page .grid-status { margin: 48px -52px 0; }
+    .designer-page .grid        { margin: 0 -52px; }
     @media (max-width: 600px) {
+      .designer-page .grid-status { margin: 32px -24px 0; }
+      .designer-page .grid        { margin: 0 -24px; }
+    }
+    /* ── END DESIGNER PAGE ── */
+
+    @media (max-width: 600px) {
+      .designer-page { padding: 36px 24px 60px; }
+      .dpage-back { margin-bottom: 32px; }
       header { padding: 36px 24px 28px; }
       header.scrolled { padding: 36px 24px 28px; border-bottom: none; }
       header.scrolled h1 { font-size: clamp(22px, 2.8vw, 36px); }
@@ -840,7 +902,6 @@
     <div class="sidebar-options">
       <button class="ctrl-btn active" data-sort="name">A–Z</button>
       <button class="ctrl-btn" data-sort="year">Year</button>
-      <button class="ctrl-btn" data-sort="designer">Designer</button>
     </div>
   </div>
   <div class="sidebar-section">
@@ -878,6 +939,7 @@
 <main class="grid" id="grid"></main>
 <div class="timeline" id="timeline"></div>
 <div class="list-view" id="listView"></div>
+<div class="designer-page" id="designerPage"></div>
 
 <div class="overlay" id="overlay" role="dialog" aria-modal="true">
   <div class="modal-wrap">
@@ -2161,10 +2223,51 @@ const chairs = [
   }
 ];
 
+// ── Designer data ─────────────────────────────────────
+const designers = {
+  'Charles & Ray Eames':    { nationality: 'American', dates: '1907–1978 / 1912–1988', bio: 'The most celebrated design partnership of the 20th century, Charles and Ray approached furniture as a materials science problem as much as an aesthetic one. From their Los Angeles studio they bent plywood, molded fiberglass, and cast aluminum into objects that remain as vital today as when they were made.' },
+  'Marcel Breuer':          { nationality: 'Hungarian–American', dates: '1902–1981', bio: 'A Bauhaus student who became one of its masters, Breuer was the first to bend tubular steel — borrowed from the handlebars of his Adler bicycle — into furniture. His chairs, spare and geometrically resolved, defined the modern interior for a generation.' },
+  'Mies van der Rohe':      { nationality: 'German–American', dates: '1886–1969', bio: 'The architect who coined "less is more" brought the same uncompromising rigor to furniture as to his glass-and-steel buildings. Each chair is a meditation on structural honesty — geometry, load, and material exposed rather than concealed.' },
+  'Eero Saarinen':          { nationality: 'Finnish–American', dates: '1910–1961', bio: 'The son of architect Eliel Saarinen, Eero grew up between Finland and America and absorbed both. Troubled by the "slum of legs" cluttering mid-century interiors, he spent years developing the Tulip Chair — a single sculptural form uniting seat, stem, and base.' },
+  'Arne Jacobsen':          { nationality: 'Danish', dates: '1902–1971', bio: 'Denmark\'s most celebrated modernist, Jacobsen practiced total design — buildings, interiors, textiles, and cutlery as naturally as chairs. His organic forms were shaped as much by his study of botany as by any theory of function.' },
+  'Hans Wegner':            { nationality: 'Danish', dates: '1914–2007', bio: 'Apprenticed as a cabinetmaker before becoming a designer, Wegner spent a lifetime studying the chair as a craft object. He produced over 500 designs — each a quiet negotiation between hand, material, and body. "A chair," he said, "is only finished when someone sits in it."' },
+  'Harry Bertoia':          { nationality: 'Italian–American', dates: '1915–1978', bio: 'Trained as a goldsmith, Bertoia brought a sculptor\'s instinct to industrial wire. The Diamond Chair is less about sitting than about space — "mostly air," he said, "just air and a little wire" — a piece of sculpture that happens to function as a seat.' },
+  'Michael Thonet':         { nationality: 'German–Austrian', dates: '1796–1871', bio: 'A cabinetmaker who invented the industrial production of furniture, Thonet discovered that steam could bend solid beechwood into sinuous curves without splitting. His No. 14 chair — six pieces of wood, ten screws, two nuts — was the first truly mass-produced piece of furniture.' },
+  'Verner Panton':          { nationality: 'Danish', dates: '1926–1998', bio: 'The enfant terrible of Danish design, Panton pursued a single obsession: the chair made from one continuous piece of material, with no visible joints or legs. His 1967 Panton Chair was the first stacking cantilevered plastic chair ever realized.' },
+  'Gerrit Rietveld':        { nationality: 'Dutch', dates: '1888–1964', bio: 'A cabinetmaker turned architect, Rietveld translated De Stijl\'s principles — primary colors, right angles, opposing planes — directly into furniture. The Red and Blue Chair is not just a seat but a spatial manifesto, demonstrating that art and everyday life need not be separate.' },
+  'Gio Ponti':              { nationality: 'Italian', dates: '1891–1979', bio: 'Italy\'s most productive modern designer, Ponti was an architect, editor, and theorist who believed lightness was the supreme virtue. The Superleggera was his obsession made manifest — a traditional Chiavari chair stripped to its irreducible minimum, weighing just 1.7 kilograms.' },
+  'Le Corbusier':           { nationality: 'Swiss–French', dates: '1887–1965', bio: 'The architect who declared the house "a machine for living" believed furniture should follow suit. With Charlotte Perriand and Pierre Jeanneret, he produced a small canon of chairs that remain benchmarks of modernist thinking, each designed around a precise theory of the body at rest.' },
+  'Alvar Aalto':            { nationality: 'Finnish', dates: '1898–1976', bio: 'Finland\'s greatest architect replaced the cold steel of International Modernism with bent birch, bringing warmth and humanity to the machine age. His laminated wood furniture demonstrated that industrial production need not mean industrial coldness.' },
+  'Philippe Starck':        { nationality: 'French', dates: '1949–', bio: 'The French designer who made wit a design value, Starck has produced everything from a toothbrush to a superyacht. The Louis Ghost Chair is his most enduring piece — an 18th-century silhouette reborn in transparent polycarbonate, at once a homage and a gentle subversion.' },
+  'Eero Aarnio':            { nationality: 'Finnish', dates: '1932–', bio: 'A Finnish designer who found international fame with a single startling form, Aarnio transformed the fiberglass pod into an environment. The Ball Chair offers not just a seat but a room within a room — a private sphere that shuts out the world around it.' },
+  'Jorge Ferrari-Hardoy':   { nationality: 'Argentine', dates: '1914–1977', bio: 'An Argentine architect who studied with Le Corbusier, Ferrari-Hardoy adapted an 1850s British officer\'s folding chair into the BKF — a seat of canvas slung between iron rods that became one of the most copied pieces of furniture in history.' },
+  'Jean Prouvé':            { nationality: 'French', dates: '1901–1984', bio: 'A metalworker\'s son who became architect and designer, Prouvé approached every object as a structural problem. His furniture — honest, industrial, and elegant — expressed the forces within it rather than hiding them, bridging the workshop and the architecture studio.' },
+  'George Nelson':          { nationality: 'American', dates: '1908–1986', bio: 'Herman Miller\'s design director and one of American modernism\'s great catalysts, Nelson had a gift for identifying talent. His own designs — the Coconut Chair, the Marshmallow Sofa — share a playful geometric wit that leavened the seriousness of postwar modernism.' },
+  'Charles Rennie Mackintosh': { nationality: 'Scottish', dates: '1868–1928', bio: 'The Glasgow architect who fused Art Nouveau ornament with an austere geometric clarity, Mackintosh designed total environments — buildings, interiors, furniture, and textiles as one unified vision. His chairs are architectural events: spare, theatrical, and occasionally punishing to sit in.' },
+  'Warren Platner':         { nationality: 'American', dates: '1919–2006', bio: 'An American architect who spent five years developing his signature technique — welding hundreds of steel rods into curving, organic furniture forms — Platner sought to make industrial materials appear handmade and warm. The Platner Armchair glimmers like a chandelier at floor level.' },
+  'Olivier Mourgue':        { nationality: 'French', dates: '1939–', bio: 'A French designer who trained in Paris and Stockholm, Mourgue created the Djinn series as a rejection of the rectangular furniture then dominating interiors. The continuous foam-on-steel forms became famous as the chairs in 2001: A Space Odyssey.' },
+  'Pierre Paulin':          { nationality: 'French', dates: '1927–2009', bio: 'A French designer with an engineer\'s curiosity about materials, Paulin stretched foam over tubular steel frames to create chairs that felt as much sculptural as functional. His Tongue and Ribbon chairs are among the most sensuous objects of 1960s design.' },
+  'Piero Gatti, Cesare Paolini, Franco Teodoro': { nationality: 'Italian', dates: '1968', bio: 'Three young Turinese designers who submitted a bag of polystyrene pellets to Zanotta in 1968, they created what became the counterculture chair of the decade. The Sacco had no rigid form whatsoever — it adapted entirely to whoever was sitting in it.' },
+  'Gaetano Pesce':          { nationality: 'Italian', dates: '1939–2024', bio: 'A radical among Italian designers, Pesce treated furniture as social commentary. The UP5 Chair arrives vacuum-sealed and expands dramatically on opening — a body becoming furniture, a protest against the passivity associated with the armchair.' },
+  'Joe Colombo':            { nationality: 'Italian', dates: '1930–1971', bio: 'A former painter and sculptor, Colombo brought an avant-garde\'s ambition to industrial design, filing dozens of patents before dying at 41. The Universale was the first adult chair made entirely from injection-molded plastic — furniture as manifesto.' },
+  'Yrjö Kukkapuro':         { nationality: 'Finnish', dates: '1933–', bio: 'A Finnish designer whose ergonomic research shaped his entire practice, Kukkapuro spent years studying how the human body distributes weight. The Karuselli is a chair that holds you rather than simply supports you — widely considered one of the most comfortable ever made.' },
+  'Tom Dixon':              { nationality: 'British', dates: '1959–', bio: 'A self-taught designer who learned to weld before he learned design\'s rules, Dixon made his name with welded metal furniture before moving into product design. The S-Chair\'s woven natural fibre over bent steel is as much craft object as furniture.' },
+  'Bill Stumpf & Don Chadwick': { nationality: 'American', dates: '', bio: 'Two ergonomists who approached the office chair as an engineering problem, studying how people actually sit before designing the Aeron. Their breakthrough was the pellicle mesh — a material that breathes and conforms to the body rather than simply holding it.' },
+  'Marc Newson':            { nationality: 'Australian', dates: '1963–', bio: 'One of the most commercially successful designers of his generation, Newson brings a sensualist\'s approach to industrial materials — his forms are round where others are angular, inviting where others are austere. The Lockheed Lounge became one of the most valuable pieces of design ever sold at auction.' },
+  'Ronan & Erwan Bouroullec': { nationality: 'French', dates: 'Ronan 1971– / Erwan 1976–', bio: 'The Bouroullec brothers make design as much about process as outcome — they sketch and model obsessively before committing to form. The Vegetal Chair was grown algorithmically from a digital plant structure before being realized in injection-molded plastic.' },
+  'Hans Coray':             { nationality: 'Swiss', dates: '1906–1991', bio: 'A sculptor who received a furniture commission for the 1939 Swiss National Exhibition and produced one of the century\'s most enduring designs, Coray punched 91 holes in aluminum sheet to make a chair both lightweight and rigid. The Landi remains in production more than 80 years later.' },
+  'Fernando & Humberto Campana': { nationality: 'Brazilian', dates: 'Fernando 1961– / Humberto 1953–', bio: 'São Paulo brothers who transformed materials found in Brazilian street markets — rope, garden hose, stuffed animals — into high design objects, the Campanas brought raw material sensibility to furniture. The Favela Chair is built from irregular wood scraps, seemingly improvised, yet holds together perfectly.' },
+  'Finn Juhl':              { nationality: 'Danish', dates: '1912–1989', bio: 'The most sculptural of the great Danish furniture designers, Juhl treated the seat shell as something separate from its frame — floating above rather than resting on its support. His approach was closer to abstract sculpture than traditional chair-making.' },
+  'Pierre Jeanneret':       { nationality: 'Swiss', dates: '1896–1967', bio: 'Le Corbusier\'s cousin and long-time collaborator, Jeanneret was the quiet engine behind many projects credited to his more famous partner. His Chandigarh furniture — designed for the Indian city planned by Corbusier — is now among the most collected mid-century design in the world.' },
+  'Frank Lloyd Wright':     { nationality: 'American', dates: '1867–1959', bio: 'America\'s most iconoclastic architect designed furniture as extensions of his buildings — geometric, ornamental, and integral to the total environment. His chairs were interior architecture, expressing the same spatial ideas as the rooms and buildings surrounding them.' },
+  'Mart Stam / Mies van der Rohe': { nationality: 'Dutch / German–American', dates: '1899–1986 / 1886–1969', bio: 'The first cantilevered chair — supported only at the front, with no back legs — was developed almost simultaneously by Mart Stam, who sketched it at a 1926 Bauhaus dinner, and Ludwig Mies van der Rohe, whose more refined version followed shortly after. The resulting patent dispute is one of design history\'s more contentious footnotes.' },
+};
+
 // ── Render grid ──────────────────────────────────────
-const grid     = document.getElementById('grid');
-const timeline = document.getElementById('timeline');
-const listEl   = document.getElementById('listView');
+const grid           = document.getElementById('grid');
+const timeline       = document.getElementById('timeline');
+const listEl         = document.getElementById('listView');
+const designerPageEl = document.getElementById('designerPage');
 
 const sorters = {
   name:     (a, b) => a.name.localeCompare(b.name),
@@ -2172,10 +2275,12 @@ const sorters = {
   designer: (a, b) => a.designer.localeCompare(b.designer),
 };
 
-let currentSort     = 'name';
-let currentDesigner = null;
-let currentMovement = null;
-let currentView     = 'grid';
+let currentSort        = 'name';
+let currentDesigner    = null;
+let currentMovement    = null;
+let currentView        = 'grid';
+let prevView           = 'grid';
+let currentDesignerName = null;
 
 const sortLabels = { name: 'A–Z', year: 'Year', designer: 'Designer' };
 
@@ -2341,15 +2446,77 @@ function setView(view) {
   document.getElementById('viewTimelineBtn').classList.toggle('active', view === 'timeline');
   document.getElementById('viewListBtn').classList.toggle('active', view === 'list');
   document.getElementById('sortSection').style.display = view === 'timeline' ? 'none' : '';
-  grid.style.display     = view === 'grid'     ? '' : 'none';
-  timeline.style.display = view === 'timeline' ? 'block' : 'none';
-  listEl.style.display   = view === 'list'     ? 'flex'  : 'none';
+  document.getElementById('gridStatus').style.display = '';
+  document.body.classList.remove('designer-view');
+  grid.style.display         = view === 'grid'     ? '' : 'none';
+  timeline.style.display     = view === 'timeline' ? 'block' : 'none';
+  listEl.style.display       = view === 'list'     ? 'flex'  : 'none';
+  designerPageEl.style.display = 'none';
   renderView();
 }
+
+// ── DESIGNER PAGE FEATURE ────────────────────────────
+function openDesignerPage(name) {
+  if (currentView !== 'designer') prevView = currentView;
+  currentDesignerName = name;
+  currentView = 'designer';
+  grid.style.display           = 'none';
+  timeline.style.display       = 'none';
+  listEl.style.display         = 'none';
+  designerPageEl.style.display = 'block';
+  closeModal();
+  closeSidebar();
+  window.scrollTo(0, 0);
+  renderDesignerPage();
+}
+
+function renderDesignerPage() {
+  const name = currentDesignerName;
+  const info = designers[name] || {};
+  const designerChairs = [...chairs]
+    .filter(c => c.designer === name)
+    .sort(currentSort === 'year' ? (a, b) => parseInt(a.year) - parseInt(b.year)
+                                 : (a, b) => a.name.localeCompare(b.name));
+
+  const metaParts = [info.nationality, info.dates].filter(Boolean);
+
+  document.getElementById('gridStatus').style.display = 'none';
+  document.body.classList.add('designer-view');
+
+  designerPageEl.innerHTML = `
+    <button class="dpage-back" onclick="setView('${prevView}')">
+      <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="13" y1="8" x2="3" y2="8"/><polyline points="7,4 3,8 7,12"/>
+      </svg>
+      All chairs
+    </button>
+    <h2 class="dpage-name">${name}</h2>
+    ${metaParts.length ? `<p class="dpage-meta">${metaParts.join(' · ')}</p>` : ''}
+    ${info.bio ? `<p class="dpage-bio">${info.bio}</p>` : ''}
+    <div class="grid-status">
+      <span>Chairs by ${name}</span><span>${designerChairs.length} chair${designerChairs.length !== 1 ? 's' : ''}</span>
+    </div>
+    <div class="grid" id="dpageGrid"></div>
+  `;
+
+  const dpageGrid = document.getElementById('dpageGrid');
+  designerChairs.forEach(chair => {
+    const card = document.createElement('article');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-art">${chair.svg}</div>
+      <h2 class="card-name">${chair.name}</h2>
+      <div class="card-meta"><span>${chair.year}</span></div>`;
+    card.addEventListener('click', () => openModal(chair));
+    dpageGrid.appendChild(card);
+  });
+}
+// ── END DESIGNER PAGE FEATURE ────────────────────────
 
 function renderView() {
   if (currentView === 'grid') renderGrid();
   else if (currentView === 'timeline') renderTimeline();
+  else if (currentView === 'designer') renderDesignerPage();
   else renderList();
 }
 // ── END TIMELINE FEATURE ──────────────────────────────
@@ -2395,7 +2562,7 @@ function openModal(c) {
     <div class="modal-body">
       <button class="modal-close" onclick="closeModal()" aria-label="Close">&#x2715;</button>
       <h2 class="modal-name">${c.name}</h2>
-      <button class="modal-designer" onclick="filterByDesigner('${c.designer}')">${c.designer}</button>
+      <button class="modal-designer" onclick="openDesignerPage('${c.designer}')">${c.designer}</button>
       <p class="modal-desc">${c.description}</p>
       <div class="modal-details">
         <div class="detail-row">
@@ -2442,13 +2609,10 @@ function setTheme(theme) {
 
 (function initTheme() {
   const saved = localStorage.getItem('theme');
-  const preferred = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  setTheme(preferred);
+  if (saved) { setTheme(saved); return; }
+  const hour = new Date().getHours();
+  setTheme(hour < 7 || hour >= 19 ? 'dark' : 'light');
 })();
-
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-  if (!localStorage.getItem('theme')) setTheme(e.matches ? 'dark' : 'light');
-});
 // ── End Theme ─────────────────────────────────────────
 
 const headerEl = document.querySelector('header');
