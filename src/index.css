@@ -607,7 +607,7 @@ body.fs .fs-hint {
   transition: opacity 0.12s;
 }
 
-.tl-decade .tl-card:first-of-type { border-top: 1px solid var(--border); }
+
 .tl-card:last-child { border-bottom: none; }
 .tl-card:hover { opacity: 0.55; }
 
