@@ -1,16 +1,28 @@
-# React + Vite
+# Chairwala
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A catalogue of chairs that changed the way we think about sitting.
 
-Currently, two official plugins are available:
+48 iconic chair designs, each with an original SVG illustration, browsable in three views:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Grid** — visual overview sorted A–Z or by year
+- **Timeline** — chairs grouped by decade
+- **List** — compact numbered list
 
-## React Compiler
+Clicking a chair opens a modal with the full description, materials, origin, and manufacturer. The designer name filters to all chairs by that designer; the movement tag filters by design movement.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Stack
 
-## Expanding the ESLint configuration
+- React + Vite
+- CSS custom properties for theming (light/dark, auto-detected by time of day)
+- No external UI libraries
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Development
+
+```bash
+npm install
+npm run dev
+```
+
+## Deploy
+
+Netlify: build command `npm run build`, publish directory `dist`.
